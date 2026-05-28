@@ -1,0 +1,37 @@
+{
+  "name": "deny-public-ip-creation",
+  "properties": {
+    "displayName": "Deny creation of Public IP addresses",
+    "description": "Prevents creation of Public IP addresses to enforce Zero Trust network perimeter. Exception: Online landing zone App Gateway PIPs are managed separately.",
+    "policyType": "Custom",
+    "mode": "All",
+    "metadata": {
+      "category": "Network",
+      "version": "1.0.0"
+    },
+    "parameters": {
+      "effect": {
+        "type": "String",
+        "defaultValue": "Deny",
+        "allowedValues": ["Audit", "Deny", "Disabled"],
+        "metadata": {
+          "displayName": "Effect",
+          "description": "Deny (default) or Audit"
+        }
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "equals": "Microsoft.Network/publicIPAddresses"
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]"
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": "eastus" },
+    "environment": { "value": "prod" },
+    "hubVnetAddressPrefix": { "value": "10.0.0.0/16" },
+    "onPremAddressPrefix": { "value": "192.168.0.0/16" },
+    "vpnSharedKey": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/<connectivity-sub-id>/resourceGroups/rg-platform-secrets/providers/Microsoft.KeyVault/vaults/kv-platform-prod-001"
+        },
+        "secretName": "vpn-shared-key"
+      }
+    },
+    "logAnalyticsWorkspaceId": {
+      "value": "/subscriptions/<mgmt-sub-id>/resourceGroups/rg-platform-monitoring/providers/Microsoft.OperationalInsights/workspaces/law-platform-prod-001"
+    }
+  }
+}

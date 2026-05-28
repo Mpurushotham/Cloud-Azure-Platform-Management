@@ -1,0 +1,83 @@
+name: "02 — Bicep Validate"
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/*.bicep"
+      - "**/*.json"
+      - "!monitoring/workbooks/**"
+      - "!monitoring/dashboards/**"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  bicep-build:
+    name: Bicep Build (Syntax Check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bicep CLI
+        run: |
+          curl -Lo bicep https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64
+          chmod +x ./bicep
+          sudo mv ./bicep /usr/local/bin/bicep
+          bicep --version
+
+      - name: Build all Bicep files
+        run: |
+          echo "Building all .bicep files..."
+          FAILED=0
+          find . -name "*.bicep" -not -path "./.git/*" | while read -r file; do
+            echo "  Building: $file"
+            if ! bicep build "$file" --stdout > /dev/null 2>&1; then
+              echo "  ::error file=$file::Bicep build failed for $file"
+              FAILED=1
+            fi
+          done
+          if [ $FAILED -ne 0 ]; then
+            echo "::error::One or more Bicep files failed to build."
+            exit 1
+          fi
+          echo "All Bicep files built successfully."
+
+  bicep-what-if:
+    name: Bicep Deployment What-If
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_DEV_SUBSCRIPTION_ID }}
+          enable-AzPSSession: false
+
+      - name: Install Bicep CLI
+        run: az bicep install
+
+      - name: What-If — Hub Networking
+        run: |
+          az deployment sub what-if \
+            --location eastus \
+            --template-file networking/hub/main.bicep \
+            --parameters networking/hub/parameters/prod.json \
+            --no-pretty-print 2>&1 | head -200
+        continue-on-error: true
+
+      - name: What-If — Governance Policies
+        run: |
+          az deployment mg what-if \
+            --management-group-id ${{ secrets.ROOT_MG_ID }} \
+            --location eastus \
+            --template-file governance/policies/assignments/main.bicep \
+            --parameters logAnalyticsWorkspaceId="/subscriptions/${{ secrets.AZURE_DEV_SUBSCRIPTION_ID }}/resourceGroups/rg-monitoring/providers/Microsoft.OperationalInsights/workspaces/law-dev" \
+            --no-pretty-print 2>&1 | head -200
+        continue-on-error: true

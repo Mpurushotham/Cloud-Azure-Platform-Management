@@ -1,0 +1,53 @@
+{
+  "name": "allowed-resource-locations",
+  "properties": {
+    "displayName": "Allowed resource deployment locations",
+    "description": "Restricts resource deployment to approved Azure regions only to ensure data residency compliance.",
+    "policyType": "Custom",
+    "mode": "Indexed",
+    "metadata": {
+      "category": "General",
+      "version": "1.0.0"
+    },
+    "parameters": {
+      "allowedLocations": {
+        "type": "Array",
+        "defaultValue": ["eastus", "eastus2", "westus2"],
+        "allowedValues": [
+          "eastus", "eastus2", "westus2", "westeurope",
+          "northeurope", "uksouth", "southeastasia", "global"
+        ],
+        "metadata": {
+          "displayName": "Allowed locations",
+          "description": "List of allowed Azure regions for resource deployment"
+        }
+      },
+      "effect": {
+        "type": "String",
+        "defaultValue": "Deny",
+        "allowedValues": ["Audit", "Deny", "Disabled"]
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "location",
+            "notIn": "[parameters('allowedLocations')]"
+          },
+          {
+            "field": "location",
+            "notEquals": "global"
+          },
+          {
+            "field": "type",
+            "notEquals": "Microsoft.AzureActiveDirectory/b2cDirectories"
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]"
+      }
+    }
+  }
+}

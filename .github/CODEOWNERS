@@ -1,0 +1,38 @@
+# CODEOWNERS — Cloud-Azure-Platform-Management
+# Each line is a file pattern followed by one or more owners.
+# Owners are automatically requested for review when a PR touches matching files.
+
+# Global fallback — platform team reviews everything
+*                                   @contoso/platform-team
+
+# Governance changes require governance + security lead
+/governance/                        @contoso/platform-governance @contoso/security-lead
+/governance/policies/               @contoso/platform-governance @contoso/security-lead @contoso/compliance-team
+
+# Networking changes require network architect
+/networking/                        @contoso/network-architects @contoso/platform-team
+
+# Landing zone changes require landing zone owners + platform
+/landing-zones/                     @contoso/platform-team @contoso/landing-zone-owners
+
+# Security requires security team sign-off
+/security/                          @contoso/security-team @contoso/security-lead
+
+# Monitoring changes reviewed by SRE team
+/monitoring/                        @contoso/sre-team @contoso/platform-team
+
+# FinOps changes need FinOps practice lead
+/finops/                            @contoso/finops-lead @contoso/platform-team
+
+# CI/CD pipeline changes need platform lead
+/.github/workflows/                 @contoso/platform-lead @contoso/devsecops-team
+
+# Terraform reviewed by IaC guild
+/terraform/                         @contoso/iac-guild @contoso/platform-team
+
+# Automation scripts
+/automation/                        @contoso/platform-team @contoso/sre-team
+/scripts/                           @contoso/platform-team
+
+# Docs — open review, platform team final
+/docs/                              @contoso/platform-team

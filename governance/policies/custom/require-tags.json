@@ -1,0 +1,49 @@
+{
+  "name": "require-mandatory-tags",
+  "properties": {
+    "displayName": "Require mandatory tags on all resources",
+    "description": "Enforces that all resources have the required tags: Environment, CostCenter, Owner, Application, ManagedBy.",
+    "policyType": "Custom",
+    "mode": "Indexed",
+    "metadata": {
+      "category": "Tags",
+      "version": "1.1.0"
+    },
+    "parameters": {
+      "effect": {
+        "type": "String",
+        "defaultValue": "Deny",
+        "allowedValues": ["Audit", "Deny", "Disabled"]
+      }
+    },
+    "policyRule": {
+      "if": {
+        "anyOf": [
+          {
+            "field": "tags['Environment']",
+            "exists": "false"
+          },
+          {
+            "field": "tags['CostCenter']",
+            "exists": "false"
+          },
+          {
+            "field": "tags['Owner']",
+            "exists": "false"
+          },
+          {
+            "field": "tags['Application']",
+            "exists": "false"
+          },
+          {
+            "field": "tags['ManagedBy']",
+            "exists": "false"
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]"
+      }
+    }
+  }
+}

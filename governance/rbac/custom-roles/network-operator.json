@@ -1,0 +1,26 @@
+{
+  "Name": "Network Operator",
+  "Id": "00000000-0000-0000-0000-000000000002",
+  "IsCustom": true,
+  "Description": "Full network read/write access. Cannot access compute, storage, or security plane resources.",
+  "Actions": [
+    "Microsoft.Network/*",
+    "Microsoft.Resources/deployments/*",
+    "Microsoft.Resources/subscriptions/resourceGroups/read",
+    "Microsoft.Authorization/*/read",
+    "Microsoft.Insights/alertRules/*",
+    "Microsoft.Insights/diagnosticSettings/*",
+    "Microsoft.Support/*"
+  ],
+  "NotActions": [
+    "Microsoft.Compute/*",
+    "Microsoft.Storage/*",
+    "Microsoft.KeyVault/*",
+    "Microsoft.Security/*"
+  ],
+  "DataActions": [],
+  "NotDataActions": [],
+  "AssignableScopes": [
+    "/providers/Microsoft.Management/managementGroups/Contoso-Connectivity"
+  ]
+}

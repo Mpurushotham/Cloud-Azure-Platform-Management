@@ -1,0 +1,95 @@
+name: "05 — Deploy Dev"
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ARM_USE_OIDC: "true"
+  TF_VERSION: "1.7.5"
+
+jobs:
+  deploy-bicep-dev:
+    name: Deploy Bicep — Dev
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_DEV_SUBSCRIPTION_ID }}
+
+      - name: Install Bicep CLI
+        run: az bicep install
+
+      - name: Deploy Monitoring (Log Analytics) — Dev
+        run: |
+          az group create \
+            --name rg-platform-monitoring-eus-001 \
+            --location eastus \
+            --subscription ${{ secrets.AZURE_DEV_SUBSCRIPTION_ID }} \
+            --tags Environment=dev ManagedBy=platform-team CostCenter=CC-PLATFORM Owner=platform-team@contoso.com Application=platform-monitoring || true
+
+          az deployment group create \
+            --resource-group rg-platform-monitoring-eus-001 \
+            --template-file monitoring/log-analytics/main.bicep \
+            --parameters environment=dev workspaceName=law-platform-dev-001 \
+            --name "deploy-monitoring-$(date +%Y%m%d-%H%M%S)"
+
+      - name: Deploy Security (Defender) — Dev
+        run: |
+          az deployment sub create \
+            --location eastus \
+            --template-file security/defender/main.bicep \
+            --parameters logAnalyticsWorkspaceId="/subscriptions/${{ secrets.AZURE_DEV_SUBSCRIPTION_ID }}/resourceGroups/rg-platform-monitoring-eus-001/providers/Microsoft.OperationalInsights/workspaces/law-platform-dev-001" \
+            --name "deploy-defender-$(date +%Y%m%d-%H%M%S)"
+
+  deploy-terraform-dev:
+    name: Terraform Apply — Dev
+    runs-on: ubuntu-latest
+    environment: dev
+    needs: [deploy-bicep-dev]
+    defaults:
+      run:
+        working-directory: terraform/environments/dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_DEV_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        run: terraform init -backend-config="subscription_id=${{ secrets.AZURE_DEV_SUBSCRIPTION_ID }}"
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_DEV_SUBSCRIPTION_ID }}
+
+      - name: Terraform Apply
+        run: |
+          terraform apply \
+            -var="subscription_id=${{ secrets.AZURE_DEV_SUBSCRIPTION_ID }}" \
+            -auto-approve
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_DEV_SUBSCRIPTION_ID }}

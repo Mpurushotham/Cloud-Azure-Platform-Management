@@ -1,0 +1,23 @@
+{
+  "Name": "Landing Zone Owner",
+  "Id": "00000000-0000-0000-0000-000000000004",
+  "IsCustom": true,
+  "Description": "Full Contributor access within assigned subscription plus ability to assign RBAC roles at subscription and resource group scope. Cannot modify policy or create management groups.",
+  "Actions": [
+    "*"
+  ],
+  "NotActions": [
+    "Microsoft.Authorization/elevateAccess/Action",
+    "Microsoft.Blueprint/blueprintAssignments/write",
+    "Microsoft.Blueprint/blueprintAssignments/delete",
+    "Microsoft.Management/managementGroups/write",
+    "Microsoft.Authorization/policyAssignments/write",
+    "Microsoft.Authorization/policyDefinitions/write",
+    "Microsoft.Authorization/policySetDefinitions/write"
+  ],
+  "DataActions": [],
+  "NotDataActions": [],
+  "AssignableScopes": [
+    "/providers/Microsoft.Management/managementGroups/Contoso-LandingZones"
+  ]
+}

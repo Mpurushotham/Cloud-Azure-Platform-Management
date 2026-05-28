@@ -1,0 +1,85 @@
+{
+  "name": "security-baseline-initiative",
+  "properties": {
+    "displayName": "Enterprise Security Baseline Initiative",
+    "description": "Bundles all security baseline policies aligned with Microsoft Cloud Security Benchmark (MCSB) v3. Includes network, identity, data protection, logging, and vulnerability management controls.",
+    "policyType": "Custom",
+    "metadata": {
+      "category": "Security",
+      "version": "2.0.0"
+    },
+    "parameters": {
+      "tlsEffect": {
+        "type": "String",
+        "defaultValue": "Deny",
+        "allowedValues": ["Audit", "Deny", "Disabled"]
+      },
+      "encryptionEffect": {
+        "type": "String",
+        "defaultValue": "AuditIfNotExists",
+        "allowedValues": ["AuditIfNotExists", "Disabled"]
+      },
+      "publicIpEffect": {
+        "type": "String",
+        "defaultValue": "Deny",
+        "allowedValues": ["Audit", "Deny", "Disabled"]
+      }
+    },
+    "policyDefinitions": [
+      {
+        "policyDefinitionReferenceId": "EnforceTLS",
+        "policyDefinitionId": "/providers/Microsoft.Management/managementGroups/Contoso/providers/Microsoft.Authorization/policyDefinitions/enforce-tls-minimum-version",
+        "parameters": {
+          "effect": { "value": "[parameters('tlsEffect')]" }
+        }
+      },
+      {
+        "policyDefinitionReferenceId": "AuditEncryption",
+        "policyDefinitionId": "/providers/Microsoft.Management/managementGroups/Contoso/providers/Microsoft.Authorization/policyDefinitions/audit-unencrypted-storage-and-disks",
+        "parameters": {
+          "effect": { "value": "[parameters('encryptionEffect')]" }
+        }
+      },
+      {
+        "policyDefinitionReferenceId": "MFAForPrivilegedAccounts",
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/931e118d-049c-44c5-b86d-3f249f8d3ce3",
+        "parameters": {}
+      },
+      {
+        "policyDefinitionReferenceId": "DefenderForServers",
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/4da35fc9-c9e7-4960-aec9-797fe7d9051d",
+        "parameters": {}
+      },
+      {
+        "policyDefinitionReferenceId": "VulnerabilityAssessment",
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/13ce0167-8ca6-4048-8e6b-f996402e3c1b",
+        "parameters": {}
+      },
+      {
+        "policyDefinitionReferenceId": "DiagnosticSettingsKeyVault",
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/951af2fa-529b-416e-ab6e-066fd85ac459",
+        "parameters": {}
+      },
+      {
+        "policyDefinitionReferenceId": "SecureTransferStorage",
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/404c3081-a854-4457-ae30-26a93ef643f9",
+        "parameters": {}
+      },
+      {
+        "policyDefinitionReferenceId": "KeyVaultSoftDelete",
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/1e66c121-a66a-4b1f-9b83-0fd99bf0fc2d",
+        "parameters": {}
+      },
+      {
+        "policyDefinitionReferenceId": "KeyVaultPurgeProtection",
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/0b60c0b2-2dc2-4e1c-b5c9-abbed971de53",
+        "parameters": {}
+      },
+      {
+        "policyDefinitionReferenceId": "StoragePrivateEndpoint",
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/6edd7eda-6dd8-40f7-810d-67160c639cd9",
+        "parameters": {}
+      }
+    ]
+  }
+}

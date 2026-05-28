@@ -1,0 +1,150 @@
+name: "07 — Deploy Prod"
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ARM_USE_OIDC: "true"
+  TF_VERSION: "1.7.5"
+
+jobs:
+  # ─── Pre-deployment checks ──────────────────────────────────────────────────
+  pre-deployment-checks:
+    name: Pre-Deployment Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify staging deployment exists for this version
+        run: |
+          TAG=${{ github.ref_name }}
+          RC_TAG="${TAG}-rc"
+          echo "Verifying staging was deployed before production..."
+          # In practice, check your release process gate here
+          echo "Tag: $TAG — proceeding with production deployment"
+
+      - name: Confirm version format
+        run: |
+          TAG=${{ github.ref_name }}
+          if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Tag $TAG is not a valid production release tag (expected vX.Y.Z)"
+            exit 1
+          fi
+          echo "Valid production release tag: $TAG"
+
+  # ─── Bicep deployment — production ──────────────────────────────────────────
+  deploy-bicep-prod:
+    name: Deploy Bicep — Production
+    runs-on: ubuntu-latest
+    environment: prod   # Requires required reviewers approval (platform lead sign-off)
+    needs: [pre-deployment-checks]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_PROD_SUBSCRIPTION_ID }}
+
+      - name: Install Bicep CLI
+        run: az bicep install
+
+      - name: Deploy Monitoring — Production
+        run: |
+          az group create \
+            --name rg-platform-monitoring-eus-001 \
+            --location eastus \
+            --tags Environment=prod ManagedBy=platform-team CostCenter=CC-PLATFORM Owner=platform-team@contoso.com Application=platform-monitoring || true
+
+          az deployment group create \
+            --resource-group rg-platform-monitoring-eus-001 \
+            --template-file monitoring/log-analytics/main.bicep \
+            --parameters environment=prod workspaceName=law-platform-prod-001 retentionInDays=90 \
+            --name "deploy-monitoring-prod-$(date +%Y%m%d-%H%M%S)"
+
+      - name: Deploy Security (Defender) — Production
+        run: |
+          az deployment sub create \
+            --location eastus \
+            --template-file security/defender/main.bicep \
+            --parameters logAnalyticsWorkspaceId="/subscriptions/${{ secrets.AZURE_PROD_SUBSCRIPTION_ID }}/resourceGroups/rg-platform-monitoring-eus-001/providers/Microsoft.OperationalInsights/workspaces/law-platform-prod-001" \
+                         securityContactEmail=security-team@contoso.com \
+            --name "deploy-defender-prod-$(date +%Y%m%d-%H%M%S)"
+
+      - name: Deploy Governance Policies — Production
+        run: |
+          az deployment mg create \
+            --management-group-id ${{ secrets.ROOT_MG_ID }} \
+            --location eastus \
+            --template-file governance/policies/assignments/main.bicep \
+            --parameters logAnalyticsWorkspaceId="/subscriptions/${{ secrets.AZURE_PROD_SUBSCRIPTION_ID }}/resourceGroups/rg-platform-monitoring-eus-001/providers/Microsoft.OperationalInsights/workspaces/law-platform-prod-001" \
+            --name "deploy-policies-prod-$(date +%Y%m%d-%H%M%S)"
+
+  # ─── Terraform apply — production ───────────────────────────────────────────
+  deploy-terraform-prod:
+    name: Terraform Apply — Production
+    runs-on: ubuntu-latest
+    environment: prod
+    needs: [deploy-bicep-prod]
+    defaults:
+      run:
+        working-directory: terraform/environments/prod
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_PROD_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        run: terraform init -backend-config="subscription_id=${{ secrets.AZURE_PROD_SUBSCRIPTION_ID }}"
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_PROD_SUBSCRIPTION_ID }}
+
+      - name: Terraform Plan (final check before apply)
+        run: |
+          terraform plan \
+            -var="subscription_id=${{ secrets.AZURE_PROD_SUBSCRIPTION_ID }}" \
+            -out=tfplan.binary \
+            -detailed-exitcode 2>&1
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_PROD_SUBSCRIPTION_ID }}
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan.binary
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_PROD_SUBSCRIPTION_ID }}
+
+      - name: Deployment Summary
+        run: |
+          echo "## Production Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time**: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployed by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,31 @@
+{
+  "Name": "Security Reader",
+  "Id": "00000000-0000-0000-0000-000000000003",
+  "IsCustom": true,
+  "Description": "Read-only access to security posture, Defender for Cloud, Sentinel, and policy compliance. No write permissions.",
+  "Actions": [
+    "Microsoft.Authorization/*/read",
+    "Microsoft.Billing/*/read",
+    "Microsoft.Insights/*/read",
+    "Microsoft.KeyVault/*/read",
+    "Microsoft.Network/*/read",
+    "Microsoft.OperationalInsights/workspaces/read",
+    "Microsoft.OperationalInsights/workspaces/query/read",
+    "Microsoft.PolicyInsights/*/read",
+    "Microsoft.Resources/deployments/read",
+    "Microsoft.Resources/subscriptions/resourceGroups/read",
+    "Microsoft.Resources/subscriptions/read",
+    "Microsoft.Security/*/read",
+    "Microsoft.SecurityInsights/*/read",
+    "Microsoft.Support/*"
+  ],
+  "NotActions": [],
+  "DataActions": [
+    "Microsoft.OperationalInsights/workspaces/query/*/read",
+    "Microsoft.KeyVault/vaults/secrets/readMetadata/action"
+  ],
+  "NotDataActions": [],
+  "AssignableScopes": [
+    "/providers/Microsoft.Management/managementGroups/Contoso"
+  ]
+}

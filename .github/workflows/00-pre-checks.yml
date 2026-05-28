@@ -1,0 +1,66 @@
+name: "00 — Pre-Checks"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pr-validation:
+    name: PR Title and Branch Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR title format
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            chore
+            docs
+            refactor
+            security
+            governance
+            network
+            finops
+          requireScope: false
+
+      - name: Validate branch naming
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          if ! echo "$BRANCH" | grep -qE '^(feature|fix|hotfix|chore|docs|security|governance|network|finops)/[a-z0-9-]+$'; then
+            echo "::error::Branch name '$BRANCH' doesn't match required pattern: <type>/<description>"
+            echo "Examples: feature/add-corp-landing-zone, fix/firewall-rule-typo, security/update-policies"
+            exit 1
+          fi
+          echo "Branch name validation passed: $BRANCH"
+
+      - name: Check for required PR labels
+        uses: mheap/github-action-required-labels@v5
+        with:
+          mode: minimum
+          count: 1
+          labels: |
+            governance
+            networking
+            security
+            monitoring
+            finops
+            automation
+            terraform
+            documentation
+            ci-cd
+          message: "PR must have at least one area label. Add one of: governance, networking, security, monitoring, finops, automation, terraform, documentation, ci-cd"
+
+      - name: Check PR description is not empty
+        run: |
+          if [ -z "${{ github.event.pull_request.body }}" ]; then
+            echo "::error::PR description is required. Please describe what this PR changes and why."
+            exit 1
+          fi
+          echo "PR description found."

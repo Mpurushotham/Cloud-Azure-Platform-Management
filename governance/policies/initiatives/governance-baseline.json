@@ -1,0 +1,64 @@
+{
+  "name": "governance-baseline-initiative",
+  "properties": {
+    "displayName": "Enterprise Governance Baseline Initiative",
+    "description": "Bundles tagging, naming, location, and resource consistency policies. Ensures all resources meet governance standards for cost allocation, compliance, and operational management.",
+    "policyType": "Custom",
+    "metadata": {
+      "category": "Governance",
+      "version": "1.2.0"
+    },
+    "parameters": {
+      "tagEffect": {
+        "type": "String",
+        "defaultValue": "Deny",
+        "allowedValues": ["Audit", "Deny", "Disabled"]
+      },
+      "locationEffect": {
+        "type": "String",
+        "defaultValue": "Deny",
+        "allowedValues": ["Audit", "Deny", "Disabled"]
+      },
+      "allowedLocations": {
+        "type": "Array",
+        "defaultValue": ["eastus", "eastus2", "westus2"]
+      }
+    },
+    "policyDefinitions": [
+      {
+        "policyDefinitionReferenceId": "RequireMandatoryTags",
+        "policyDefinitionId": "/providers/Microsoft.Management/managementGroups/Contoso/providers/Microsoft.Authorization/policyDefinitions/require-mandatory-tags",
+        "parameters": {
+          "effect": { "value": "[parameters('tagEffect')]" }
+        }
+      },
+      {
+        "policyDefinitionReferenceId": "AllowedLocations",
+        "policyDefinitionId": "/providers/Microsoft.Management/managementGroups/Contoso/providers/Microsoft.Authorization/policyDefinitions/allowed-resource-locations",
+        "parameters": {
+          "effect": { "value": "[parameters('locationEffect')]" },
+          "allowedLocations": { "value": "[parameters('allowedLocations')]" }
+        }
+      },
+      {
+        "policyDefinitionReferenceId": "InheritTagFromRGEnvironment",
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/9ea02ca2-71db-412d-8b00-7c7ca9fcd32d",
+        "parameters": {
+          "tagName": { "value": "Environment" }
+        }
+      },
+      {
+        "policyDefinitionReferenceId": "InheritTagFromRGCostCenter",
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/9ea02ca2-71db-412d-8b00-7c7ca9fcd32d",
+        "parameters": {
+          "tagName": { "value": "CostCenter" }
+        }
+      },
+      {
+        "policyDefinitionReferenceId": "AuditResourceGroupTags",
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/96670d01-0a4d-4649-9c89-2d3abc0a5025",
+        "parameters": {}
+      }
+    ]
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "# Security Posture Dashboard\n\nMicrosoft Defender for Cloud Secure Score, active recommendations, and alert trends for the Azure platform."
+      },
+      "name": "header"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "SecurityAlert\n| where TimeGenerated > ago(7d)\n| summarize AlertCount = count() by Severity = AlertSeverity, bin(TimeGenerated, 1d)\n| order by TimeGenerated asc",
+        "size": 0,
+        "title": "Security Alerts (Last 7 Days) by Severity",
+        "timeContext": { "durationMs": 604800000 },
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "barchart"
+      },
+      "name": "alerts-chart"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "SecurityAlert\n| where TimeGenerated > ago(24h)\n| where AlertSeverity in ('High', 'Critical')\n| project TimeGenerated, AlertName, AlertSeverity, CompromisedEntity, RemediationSteps, Status\n| order by TimeGenerated desc\n| take 50",
+        "size": 0,
+        "title": "Critical & High Alerts (Last 24 Hours)",
+        "timeContext": { "durationMs": 86400000 },
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "table"
+      },
+      "name": "critical-alerts-table"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "SecurityRecommendation\n| where TimeGenerated > ago(1d)\n| where RecommendationState == 'Active'\n| summarize count() by RecommendationSeverity\n| project Severity = RecommendationSeverity, Count = count_",
+        "size": 4,
+        "title": "Active Recommendations by Severity",
+        "timeContext": { "durationMs": 86400000 },
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "piechart"
+      },
+      "name": "recommendations-pie"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AzureActivity\n| where TimeGenerated > ago(24h)\n| where OperationNameValue contains 'DELETE' and ActivityStatusValue == 'Success'\n| project TimeGenerated, Caller, OperationNameValue, ResourceId\n| order by TimeGenerated desc\n| take 20",
+        "size": 0,
+        "title": "Resource Deletions (Last 24 Hours)",
+        "timeContext": { "durationMs": 86400000 },
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "table"
+      },
+      "name": "deletions-table"
+    }
+  ],
+  "styleSettings": {},
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}

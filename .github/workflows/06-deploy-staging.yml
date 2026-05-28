@@ -1,0 +1,101 @@
+name: "06 — Deploy Staging"
+
+on:
+  push:
+    tags:
+      - "v*-rc*"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ARM_USE_OIDC: "true"
+  TF_VERSION: "1.7.5"
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging — ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    environment: staging  # Requires approval from staging approvers
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_STAGING_SUBSCRIPTION_ID }}
+
+      - name: Install Bicep CLI
+        run: az bicep install
+
+      - name: Deploy Monitoring — Staging
+        run: |
+          az group create \
+            --name rg-platform-monitoring-eus-001 \
+            --location eastus \
+            --tags Environment=staging ManagedBy=platform-team CostCenter=CC-PLATFORM Owner=platform-team@contoso.com Application=platform-monitoring || true
+
+          az deployment group create \
+            --resource-group rg-platform-monitoring-eus-001 \
+            --template-file monitoring/log-analytics/main.bicep \
+            --parameters environment=staging workspaceName=law-platform-staging-001 \
+            --name "deploy-monitoring-staging-$(date +%Y%m%d-%H%M%S)"
+
+      - name: Deploy Security — Staging
+        run: |
+          az deployment sub create \
+            --location eastus \
+            --template-file security/defender/main.bicep \
+            --parameters logAnalyticsWorkspaceId="/subscriptions/${{ secrets.AZURE_STAGING_SUBSCRIPTION_ID }}/resourceGroups/rg-platform-monitoring-eus-001/providers/Microsoft.OperationalInsights/workspaces/law-platform-staging-001" \
+            --name "deploy-defender-staging-$(date +%Y%m%d-%H%M%S)"
+
+  deploy-terraform-staging:
+    name: Terraform Apply — Staging
+    runs-on: ubuntu-latest
+    environment: staging
+    needs: [deploy-staging]
+    defaults:
+      run:
+        working-directory: terraform/environments/staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_STAGING_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        run: terraform init -backend-config="subscription_id=${{ secrets.AZURE_STAGING_SUBSCRIPTION_ID }}"
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_STAGING_SUBSCRIPTION_ID }}
+
+      - name: Terraform Apply
+        run: |
+          terraform apply \
+            -var="subscription_id=${{ secrets.AZURE_STAGING_SUBSCRIPTION_ID }}" \
+            -auto-approve
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_STAGING_SUBSCRIPTION_ID }}
+
+      - name: Tag deployment in GitHub
+        run: |
+          echo "Staging deployment completed for tag ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY

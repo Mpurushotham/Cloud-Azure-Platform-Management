@@ -1,0 +1,65 @@
+{
+  "name": "enforce-tls-minimum-version",
+  "properties": {
+    "displayName": "Enforce minimum TLS version 1.2",
+    "description": "Denies creation of Storage Accounts, App Services, and SQL Servers that do not enforce TLS 1.2 or higher.",
+    "policyType": "Custom",
+    "mode": "All",
+    "metadata": {
+      "category": "Security",
+      "version": "1.0.0"
+    },
+    "parameters": {
+      "effect": {
+        "type": "String",
+        "defaultValue": "Deny",
+        "allowedValues": ["Audit", "Deny", "Disabled"]
+      }
+    },
+    "policyRule": {
+      "if": {
+        "anyOf": [
+          {
+            "allOf": [
+              {
+                "field": "type",
+                "equals": "Microsoft.Storage/storageAccounts"
+              },
+              {
+                "field": "Microsoft.Storage/storageAccounts/minimumTlsVersion",
+                "notEquals": "TLS1_2"
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "field": "type",
+                "equals": "Microsoft.Web/sites"
+              },
+              {
+                "field": "Microsoft.Web/sites/siteConfig.minTlsVersion",
+                "notEquals": "1.2"
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "field": "type",
+                "equals": "Microsoft.Sql/servers"
+              },
+              {
+                "field": "Microsoft.Sql/servers/minimalTlsVersion",
+                "notIn": ["1.2", "1.3"]
+              }
+            ]
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]"
+      }
+    }
+  }
+}

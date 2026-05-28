@@ -1,0 +1,80 @@
+name: "04 — Governance Check"
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "governance/**"
+      - "landing-zones/**"
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  policy-compliance-check:
+    name: Azure Policy Compliance Dry-Run
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_DEV_SUBSCRIPTION_ID }}
+
+      - name: Check current policy compliance state
+        run: |
+          echo "=== Current Policy Compliance Summary ==="
+          az policy state summarize \
+            --subscription ${{ secrets.AZURE_DEV_SUBSCRIPTION_ID }} \
+            --query "results.policyAssignments[?summary.nonCompliantResources > \`0\`].{Policy:policyAssignmentId, NonCompliant:summary.nonCompliantResources}" \
+            --output table 2>&1 || echo "Policy state query completed (may have no results in dev)"
+
+      - name: Validate policy definition JSON files
+        run: |
+          echo "=== Validating Policy JSON syntax ==="
+          FAILED=0
+          for f in governance/policies/custom/*.json governance/policies/initiatives/*.json; do
+            echo "  Validating: $f"
+            if ! python3 -m json.tool "$f" > /dev/null 2>&1; then
+              echo "  ::error file=$f::Invalid JSON in $f"
+              FAILED=1
+            fi
+          done
+          if [ $FAILED -ne 0 ]; then exit 1; fi
+          echo "All policy JSON files are valid."
+
+      - name: Validate RBAC role definition JSON files
+        run: |
+          echo "=== Validating RBAC Role JSON syntax ==="
+          for f in governance/rbac/custom-roles/*.json; do
+            echo "  Validating: $f"
+            python3 -c "
+          import json, sys
+          with open('$f') as fh:
+              data = json.load(fh)
+          required = ['Name', 'IsCustom', 'Actions', 'AssignableScopes']
+          missing = [k for k in required if k not in data]
+          if missing:
+              print(f'Missing required fields: {missing}')
+              sys.exit(1)
+          print(f'  OK: {data[\"Name\"]}')
+          "
+          done
+
+      - name: Check management group structure is valid
+        run: |
+          echo "=== Validating Management Group Bicep ==="
+          # Check that outputs match expected MG names
+          if grep -q "mg_platform\|mg_corp\|mg_online\|mg_sandbox" governance/management-groups/main.bicep; then
+            echo "Management group hierarchy structure validated."
+          else
+            echo "::error::Expected management group resources not found in governance/management-groups/main.bicep"
+            exit 1
+          fi

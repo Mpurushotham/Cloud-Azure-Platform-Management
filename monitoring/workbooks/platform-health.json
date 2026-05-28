@@ -1,0 +1,105 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "# Platform Health Dashboard\n\nReal-time visibility into CPU, memory, disk, and network health across all platform VMs and infrastructure.\n\nUse the **TimeRange** parameter to adjust the monitoring window."
+      },
+      "name": "header"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "timeRange",
+            "version": "KqlParameterItem/1.0",
+            "name": "TimeRange",
+            "type": 4,
+            "isRequired": true,
+            "value": { "durationMs": 3600000 },
+            "typeSettings": {
+              "selectableValues": [
+                { "durationMs": 1800000 },
+                { "durationMs": 3600000 },
+                { "durationMs": 14400000 },
+                { "durationMs": 86400000 },
+                { "durationMs": 604800000 }
+              ]
+            }
+          }
+        ]
+      },
+      "name": "parameters"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "Perf\n| where ObjectName == 'Processor' and CounterName == '% Processor Time' and InstanceName == '_Total'\n| summarize AvgCPU = avg(CounterValue), MaxCPU = max(CounterValue) by Computer\n| order by MaxCPU desc\n| project Computer, ['Avg CPU (%)'] = round(AvgCPU, 2), ['Max CPU (%)'] = round(MaxCPU, 2), Status = iff(MaxCPU > 90, '🔴 Critical', iff(MaxCPU > 75, '🟡 Warning', '🟢 OK'))",
+        "size": 0,
+        "title": "CPU Utilization by VM",
+        "timeContext": { "durationMs": 3600000 },
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "table",
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "Status",
+              "formatter": 1
+            }
+          ]
+        }
+      },
+      "name": "cpu-table"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "Perf\n| where ObjectName == 'Memory' and CounterName in ('Available MBytes', '% Available Memory')\n| summarize AvailableMB = avgif(CounterValue, CounterName == 'Available MBytes'), AvailPct = avgif(CounterValue, CounterName == '% Available Memory') by Computer\n| project Computer, ['Available Memory (MB)'] = round(AvailableMB, 0), ['Available (%)'] = round(AvailPct, 2), Status = iff(AvailPct < 10, '🔴 Critical', iff(AvailPct < 20, '🟡 Warning', '🟢 OK'))",
+        "size": 0,
+        "title": "Memory Utilization by VM",
+        "timeContext": { "durationMs": 3600000 },
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "table"
+      },
+      "name": "memory-table"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "Perf\n| where ObjectName == 'LogicalDisk' and CounterName == '% Free Space' and InstanceName !in ('HarddiskVolume1', '_Total')\n| summarize MinFreeSpace = min(CounterValue) by Computer, InstanceName\n| where MinFreeSpace < 20\n| project Computer, Drive = InstanceName, ['Free Space (%)'] = round(MinFreeSpace, 2), Status = iff(MinFreeSpace < 10, '🔴 Critical', '🟡 Warning')\n| order by ['Free Space (%)'] asc",
+        "size": 0,
+        "title": "Disk Space Warnings (< 20% Free)",
+        "timeContext": { "durationMs": 86400000 },
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "table"
+      },
+      "name": "disk-table"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "Heartbeat\n| summarize LastHeartbeat = max(TimeGenerated) by Computer, OSType, Version\n| extend TimeSinceHeartbeat = now() - LastHeartbeat\n| project Computer, OSType, Version, LastHeartbeat, ['Minutes Since Heartbeat'] = round(TimeSinceHeartbeat / 1m, 1), Status = iff(TimeSinceHeartbeat > 10m, '🔴 Agent Down', '🟢 Connected')\n| order by ['Minutes Since Heartbeat'] desc",
+        "size": 0,
+        "title": "Agent Heartbeat Status",
+        "timeContext": { "durationMs": 3600000 },
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "table"
+      },
+      "name": "heartbeat-table"
+    }
+  ],
+  "styleSettings": {},
+  "fromTemplateId": "sentinel-UserWorkbook",
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}
