@@ -1,0 +1,18 @@
+<!doctype html>
+<title>AKS lab — pull path OK</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 34rem; margin: 4rem auto;
+         line-height: 1.6; padding: 0 1rem; }
+  code { background: #eee; padding: .15em .4em; border-radius: 3px; }
+</style>
+<h1>It works</h1>
+<p>
+  This page is served from an image pulled out of Azure Container Registry by
+  AKS, authenticated with the <strong>kubelet's managed identity</strong> holding
+  the <code>AcrPull</code> role.
+</p>
+<p>
+  There is no <code>imagePullSecret</code> in this cluster, and the registry has
+  <code>admin_enabled = false</code> — so there is no registry username or
+  password in existence to leak.
+</p>
