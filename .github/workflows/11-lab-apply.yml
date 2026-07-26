@@ -1,0 +1,70 @@
+name: "11 — Lab Apply (main)"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "lab/**"
+      - ".github/workflows/11-lab-apply.yml"
+  workflow_dispatch: # so you can re-apply, or apply after a manual teardown
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TF_VERSION: "1.15.5" # >= the version that wrote the state
+  ARM_USE_OIDC: "true"
+  ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  TF_VAR_owner_email: ${{ vars.LAB_OWNER_EMAIL }}
+
+jobs:
+  apply:
+    name: apply to lab
+    runs-on: ubuntu-latest
+
+    # The 'lab' environment carries a required reviewer, so this job pauses for
+    # your approval before touching Azure. One click, and a runaway change
+    # cannot quietly create billable resources while you are asleep.
+    environment: lab
+
+    defaults:
+      run:
+        working-directory: lab/terraform/environments/lab
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      # Plan to a file, then apply exactly that file. Applying a fresh plan
+      # computed at apply time would let the world change between review and
+      # execution — the enterprise 05-deploy-dev.yml does a bare
+      # `terraform apply -auto-approve`, which has that gap.
+      - name: Terraform plan
+        run: terraform plan -input=false -no-color -lock-timeout=5m -out=tfplan
+
+      - name: Terraform apply
+        run: terraform apply -input=false -no-color -lock-timeout=5m tfplan
+
+      - name: Summary
+        run: |
+          {
+            echo "## Lab apply complete"
+            echo
+            echo '```'
+            terraform output -no-color 2>/dev/null || echo "(no outputs)"
+            echo '```'
+            echo
+            echo "> Remember: this leaves billable resources running."
+            echo "> \`bash lab/scripts/teardown.sh stop\` pauses the node;"
+            echo "> \`bash lab/scripts/teardown.sh destroy\` returns to \$0."
+          } >> "$GITHUB_STEP_SUMMARY"
