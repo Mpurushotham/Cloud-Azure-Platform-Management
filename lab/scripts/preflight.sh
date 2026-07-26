@@ -22,8 +22,10 @@ echo "[1/6] Local tooling"
 for t in az terraform kubectl; do
     if command -v "$t" >/dev/null 2>&1; then ok "$t present"; else bad "$t MISSING"; fi
 done
+# docker is REQUIRED, not optional: ACR Tasks (`az acr build`) are not permitted
+# on Free Trial subscriptions, so images must be built locally.
 command -v docker >/dev/null 2>&1 && ok "docker present" \
-    || warn "docker absent — fine, we use 'az acr build' (server-side)"
+    || bad "docker MISSING — required: 'az acr build' is blocked on Free Trial (TasksOperationsNotAllowed)"
 
 # ─── 2. Authentication ───────────────────────────────────────────────────────
 echo
@@ -149,7 +151,11 @@ fi
 # ─── 6. Existing lab resources (cost already accruing?) ──────────────────────
 echo
 echo "[6/6] Existing lab footprint"
-EXISTING=$(az group list --query "[?starts_with(name,'rg-lab-')].name" -o tsv 2>/dev/null || true)
+# Exclude the state backend: it is meant to persist between sessions and is
+# not a sign of forgotten billable resources.
+EXISTING=$(az group list \
+    --query "[?starts_with(name,'rg-lab-') && !starts_with(name,'rg-lab-tfstate-')].name" \
+    -o tsv 2>/dev/null || true)
 if [ -z "$EXISTING" ]; then
     ok "no rg-lab-* groups — clean slate, nothing billing"
 else
