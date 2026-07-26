@@ -10,9 +10,9 @@ on:
       - ".github/workflows/10-lab-plan.yml"
 
 permissions:
-  id-token: write # required to request the GitHub OIDC token
+  id-token: write  # required to request the GitHub OIDC token
   contents: read
-  pull-requests: write # to post the plan as a comment
+  pull-requests: write  # to post the plan as a comment
 
 env:
   # Must be >= the version that wrote the state. State written by 1.15.x cannot

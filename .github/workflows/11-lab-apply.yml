@@ -6,14 +6,14 @@ on:
     paths:
       - "lab/**"
       - ".github/workflows/11-lab-apply.yml"
-  workflow_dispatch: # so you can re-apply, or apply after a manual teardown
+  workflow_dispatch:  # so you can re-apply, or apply after a manual teardown
 
 permissions:
   id-token: write
   contents: read
 
 env:
-  TF_VERSION: "1.15.5" # >= the version that wrote the state
+  TF_VERSION: "1.15.5"  # >= the version that wrote the state
   ARM_USE_OIDC: "true"
   ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
   ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
