@@ -40,3 +40,13 @@ output "next_steps" {
        bash lab/scripts/teardown.sh destroy
   EOT
 }
+
+output "policy_enforcement" {
+  description = "Current policy posture"
+  value       = module.governance.enforcement_mode
+}
+
+output "policy_effects" {
+  description = "Effect per control, and how many scopes are excluded"
+  value       = module.governance.effects
+}

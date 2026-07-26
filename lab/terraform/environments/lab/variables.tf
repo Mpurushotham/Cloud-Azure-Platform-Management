@@ -53,3 +53,37 @@ variable "daily_quota_gb" {
   type        = number
   default     = 1
 }
+
+// ─── Policy effects (Phase 3) ────────────────────────────────────────────────
+// Default posture is audit-only. Promote controls to Deny ONE AT A TIME, so a
+// failed deployment points at a single control rather than four.
+
+variable "policy_enforce" {
+  description = "false => enforcementMode DoNotEnforce. Leave false until you have reviewed compliance."
+  type        = bool
+  default     = false
+}
+
+variable "policy_tag_effect" {
+  description = "Effect for the mandatory-tags control"
+  type        = string
+  default     = "Audit"
+}
+
+variable "policy_location_effect" {
+  description = "Effect for the allowed-locations control"
+  type        = string
+  default     = "Audit"
+}
+
+variable "policy_public_ip_effect" {
+  description = "Effect for the public-IP control. Deny here is what breaks AKS."
+  type        = string
+  default     = "Audit"
+}
+
+variable "policy_tls_effect" {
+  description = "Effect for the minimum-TLS control"
+  type        = string
+  default     = "Audit"
+}

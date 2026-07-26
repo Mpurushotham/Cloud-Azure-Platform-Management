@@ -49,3 +49,36 @@ module "cluster" {
 
   common_tags = local.common_tags
 }
+
+// ─── Governance (Phase 3) ────────────────────────────────────────────────────
+// Assigned at SUBSCRIPTION scope, because management-group scope requires root-MG
+// elevation this subscription does not have. Ships audit-only: see the module's
+// precondition, which refuses to enforce a public-IP Deny without an exclusion.
+module "governance" {
+  source = "../../modules/governance"
+
+  subscription_scope_id = "/subscriptions/${var.subscription_id}"
+
+  enforce           = var.policy_enforce
+  tag_effect        = var.policy_tag_effect
+  location_effect   = var.policy_location_effect
+  public_ip_effect  = var.policy_public_ip_effect
+  tls_effect        = var.policy_tls_effect
+  allowed_locations = [var.location]
+
+  // Scopes excluded because Azure itself creates resources there that you do not
+  // author and cannot tag at creation time. Both were found empirically by
+  // running the baseline in audit mode — see lab/scripts/policy-compliance.sh.
+  excluded_scope_ids = [
+    // AKS owns everything in MC_*: load balancers, NSGs, route tables, the
+    // egress public IP, CSI-provisioned disks. Created untagged, outside your
+    // control, so a tag or public-IP Deny here breaks the cluster.
+    "/subscriptions/${var.subscription_id}/resourceGroups/${module.cluster.node_resource_group}",
+
+    // Azure auto-creates NetworkWatcherRG + networkwatcher_<region> the moment a
+    // VNet appears in a region, untagged, in a resource group you never asked
+    // for. You can tag the instance, but the next new region silently creates
+    // another one — so tagging is not a durable fix and exclusion is.
+    "/subscriptions/${var.subscription_id}/resourceGroups/NetworkWatcherRG",
+  ]
+}
