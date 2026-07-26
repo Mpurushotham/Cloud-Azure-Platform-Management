@@ -64,7 +64,10 @@ for ref, items in sorted(by.items()):
     print(f'  {ref}  ({len(items)} resource(s))')
     for it in items[:8]:
         rid=it.get('id','')
-        rg = rid.split('/resourceGroups/')[1].split('/')[0] if '/resourceGroups/' in rid else '-'
+        # Policy state returns resource IDs LOWERCASED, so a case-sensitive
+        # split on '/resourceGroups/' never matches and every row showed 'rg=-'.
+        low = rid.lower(); marker = '/resourcegroups/'
+        rg = rid[low.index(marker)+len(marker):].split('/')[0] if marker in low else '-'
         print(f\"      {it.get('type','?'):<48} rg={rg}\")
     if len(items)>8: print(f'      ... and {len(items)-8} more')
     print()
