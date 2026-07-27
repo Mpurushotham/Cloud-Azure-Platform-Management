@@ -1,0 +1,57 @@
+# Declarative equivalent of the imperative first run:
+#   kubectl create deployment demo --image=<acr>/demo:v1
+#   kubectl expose deployment demo --type=LoadBalancer --port=80
+#
+# Prefer this: it is reviewable, diffable and reproducible. Apply with:
+#   sed "s|ACR_LOGIN_SERVER|$(terraform -chdir=../../terraform/environments/lab output -raw acr_login_server)|" k8s.yaml | kubectl apply -f -
+#
+# Note there is deliberately NO imagePullSecret. The kubelet's managed identity
+# holds AcrPull on the registry, so the pull is authorised by Entra ID and no
+# registry credential exists to steal.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo
+  labels:
+    app: demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo
+  template:
+    metadata:
+      labels:
+        app: demo
+    spec:
+      containers:
+        - name: demo
+          image: ACR_LOGIN_SERVER/demo:v1
+          ports:
+            - containerPort: 80
+          # Requests matter on a 2 vCPU / 8 GiB node: without them the
+          # scheduler cannot reason about capacity and you will hit confusing
+          # Pending pods once you add a second workload.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo
+spec:
+  type: LoadBalancer
+  selector:
+    app: demo
+  ports:
+    - port: 80
+      targetPort: 80

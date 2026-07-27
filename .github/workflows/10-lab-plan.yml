@@ -1,0 +1,94 @@
+name: "10 — Lab Plan (PR)"
+
+# Numbered 10+ to sit clearly outside the enterprise pipeline's 00–07 range.
+# Path-filtered to lab/** so lab changes never trigger the enterprise workflows
+# and vice versa.
+on:
+  pull_request:
+    paths:
+      - "lab/**"
+      - ".github/workflows/10-lab-plan.yml"
+
+permissions:
+  id-token: write  # required to request the GitHub OIDC token
+  contents: read
+  pull-requests: write  # to post the plan as a comment
+
+env:
+  # Must be >= the version that wrote the state. State written by 1.15.x cannot
+  # be read by 1.7.x — the enterprise workflows pin TF_VERSION: "1.7.5", which
+  # would fail against this lab's state file.
+  TF_VERSION: "1.15.5"
+  TF_DIR: lab/terraform/environments/lab
+
+  ARM_USE_OIDC: "true"
+  ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+  # terraform.tfvars is gitignored, so CI supplies the required variables here.
+  TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  TF_VAR_owner_email: ${{ vars.LAB_OWNER_EMAIL }}
+
+jobs:
+  plan:
+    name: fmt · validate · plan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lab/terraform/environments/lab
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform fmt
+        run: terraform fmt -recursive -check -diff ../..
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform validate
+        run: terraform validate -no-color
+
+      - name: Terraform plan
+        id: plan
+        run: |
+          set -o pipefail
+          terraform plan -input=false -no-color -lock-timeout=5m \
+            | tee plan-output.txt
+        continue-on-error: true
+
+      - name: Post plan to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'lab/terraform/environments/lab/plan-output.txt';
+            let body;
+            if (fs.existsSync(path)) {
+              const out = fs.readFileSync(path, 'utf8');
+              // GitHub comments cap at 65536 chars; keep the tail, which holds
+              // the "Plan: x to add" summary.
+              const trimmed = out.length > 60000
+                ? '... (truncated)\n' + out.slice(-60000)
+                : out;
+              body = `## Lab Terraform Plan\n\n\`\`\`terraform\n${trimmed}\n\`\`\``;
+            } else {
+              body = '## Lab Terraform Plan\n\nPlan produced no output — check the job log.';
+            }
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });
+
+      - name: Fail if plan failed
+        if: steps.plan.outcome == 'failure'
+        run: |
+          echo "::error::terraform plan failed — see the PR comment and job log"
+          exit 1

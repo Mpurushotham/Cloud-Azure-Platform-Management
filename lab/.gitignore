@@ -1,0 +1,19 @@
+# Terraform state — contains resource IDs and can contain secrets. Never commit.
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.tfstate.lock.info
+
+# Real variable values (subscription IDs, emails). Commit only the .example.
+terraform.tfvars
+*.auto.tfvars
+
+# Plan artifacts
+tfplan
+tfplan.binary
+plan-output.txt
+
+# Kubeconfig fragments
+kubeconfig
+*.kubeconfig

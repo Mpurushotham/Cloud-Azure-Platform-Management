@@ -1,0 +1,30 @@
+# Template. Copy to terraform.tfvars (gitignored) and fill in YOUR values:
+#
+#   cp terraform.tfvars.example terraform.tfvars
+#   # then get your subscription id with:
+#   az account show --query id -o tsv
+#
+# This file is committed to a PUBLIC repository, so it carries placeholders only.
+# The real values live in terraform.tfvars, which lab/.gitignore excludes.
+#
+# Note the difference from this repo's enterprise tree: its
+# terraform/environments/*/terraform.tfvars are committed WITH literal
+# "<dev-subscription-id>" strings, i.e. the placeholders are in the file
+# Terraform actually reads — which is why none of them can apply. Placeholders
+# belong in the .example; real values belong in the ignored file.
+
+subscription_id = "00000000-0000-0000-0000-000000000000" # az account show --query id -o tsv
+owner_email     = "you@example.com"                      # tag value + future alert target
+
+location        = "eastus"
+location_abbrev = "eus"
+
+# Keep node_count at 1 — Free Trial regional quota is 4 vCPU.
+# Burstable B-series is NOT offered to Free Trial subscriptions in eastus;
+# Standard_D2as_v7 = 2 vCPU / 8 GiB. Verify yours with:
+#   bash lab/scripts/preflight.sh eastus Standard_D2as_v7
+node_count   = 1
+node_vm_size = "Standard_D2as_v7"
+
+retention_days = 30
+daily_quota_gb = 1
