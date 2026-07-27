@@ -171,6 +171,45 @@ kubectl get svc demo -w        # wait for EXTERNAL-IP
 - **`terraform destroy` leaves the `MC_*` group briefly.** AKS deletes it asynchronously. Verify
   with `az group list -o table` before declaring victory.
 
+## Governance (Phase 3)
+
+Four controls — mandatory tags, allowed locations, public IP, minimum TLS — bundled into an
+initiative and assigned at **subscription** scope, because management-group scope needs root-MG
+elevation this subscription does not have. The enterprise tree has no subscription-scoped
+assignment anywhere, so this is net-new rather than a port.
+
+```bash
+bash lab/scripts/policy-compliance.sh --scan   # evaluate, then report
+```
+
+**The loop, and why it is in this order:**
+
+1. Assign with `enforce = false` (`enforcementMode: DoNotEnforce`) — Azure evaluates and reports but
+   blocks nothing.
+2. Read what is non-compliant.
+3. Exempt what you do not control (`not_scopes`), or fix the workload.
+4. Promote **one** control to `Deny`, then re-run the lab apply as a regression test.
+
+Promoting all four together makes a failed deployment ambiguous. Promoting before step 2 is how you
+discover, in production, that your own tooling violates your own policy.
+
+**What audit mode actually caught here**, neither of which was predictable from reading the code:
+
+| Resource | Why it failed | Resolution |
+|---|---|---|
+| The Terraform state storage account | `bootstrap-oidc.sh` tagged the resource group but not the account | Fixed the script — a `Deny` would have blocked the Phase 2 bootstrap |
+| `networkwatcher_eastus` in `NetworkWatcherRG` | Azure auto-creates it when a VNet first appears in a region, untagged, in a group you never made | `not_scopes` — you can tag the instance, but the next new region silently creates another |
+
+The second is the general lesson: **the platform creates resources on your behalf that violate your
+policy**, and no amount of care in your own templates prevents it. AKS's `MC_*` node resource group
+is the same problem at larger scale — load balancers, NSGs, route tables, the egress public IP and
+CSI-provisioned disks all appear untagged and outside your control.
+
+**The AKS trap, concretely.** `deny-public-ip` at `Deny` fails cluster creation with an opaque
+reconcile error that never mentions policy, because AKS creates an egress public IP in `MC_*`. Every
+`Service type=LoadBalancer` also hangs at `<pending>`, visible only in `cloud-controller-manager`
+logs. The module carries a `precondition` that refuses that combination without an exclusion.
+
 ## What comes next
 
 Phases 2–5 (OIDC + CI/CD, subscription-scoped governance, observability, then fixing the enterprise

@@ -108,11 +108,24 @@ if ! az storage account show --name "$STATE_SA" --resource-group "$STATE_RG" >/d
         --min-tls-version TLS1_2 \
         --allow-blob-public-access false \
         --allow-shared-key-access false \
+        --tags Environment=lab CostCenter=CC-PERSONAL Owner=lab \
+               Application=automation-lab ManagedBy=bootstrap-script \
         >/dev/null
     echo "  created $STATE_SA (shared-key auth DISABLED — Entra only)"
 else
     echo "  exists  $STATE_SA"
 fi
+
+# Tags are applied unconditionally: the first version of this script tagged the
+# resource group but not the account, and the lab-baseline require-tags policy
+# caught it. An untagged state account would be REJECTED once that control is
+# promoted from Audit to Deny — the bootstrap would fail against the very
+# governance it bootstraps.
+az storage account update --name "$STATE_SA" --resource-group "$STATE_RG" \
+    --set tags.Environment=lab tags.CostCenter=CC-PERSONAL tags.Owner=lab \
+          tags.Application=automation-lab tags.ManagedBy=bootstrap-script \
+    >/dev/null
+echo "  tagged  $STATE_SA (5 mandatory tags)"
 
 # Data-plane RBAC. This is the step everyone forgets: control-plane Contributor
 # does NOT let you read or write blobs when shared-key auth is disabled.

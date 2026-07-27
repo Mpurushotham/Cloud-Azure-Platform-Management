@@ -1,8 +1,10 @@
 # Free-Tier Automation Lab — Design & Roadmap
 
 > **Audience**: the repository owner, practising end-to-end Azure automation on a Free Trial
-> subscription. **Status**: Phases 0–1 implemented and verified end-to-end (ACR + AKS deployed,
-> image pulled via managed identity, `LoadBalancer` Service reachable). Phases 2–5 pending.
+> subscription. **Status**: Phases 0–3 implemented and verified. Phase 1 — ACR + AKS deployed,
+> image pulled via managed identity, `LoadBalancer` Service reachable. Phase 2 — GitHub OIDC with
+> no stored secret, remote state with Entra data-plane auth, PR-gated plan/apply. Phase 3 —
+> subscription-scoped policy baseline running audit-first. Phases 4–5 pending.
 > **Companion doc**: [`landing-zone-design.md`](landing-zone-design.md) describes the *enterprise
 > target*. This document describes what is actually reachable today and how to get there.
 
