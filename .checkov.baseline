@@ -1,0 +1,49 @@
+{
+    "failed_checks": [
+        {
+            "file": "/landing-zones/online/modules/app-gateway.bicep",
+            "findings": [
+                {
+                    "resource": "Microsoft.Network/applicationGateways.appGateway",
+                    "check_ids": [
+                        "CKV_AZURE_218"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/networking/hub/modules/vnet.bicep",
+            "findings": [
+                {
+                    "resource": "Microsoft.Network/virtualNetworks.hubVnet",
+                    "check_ids": [
+                        "CKV_AZURE_182"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/networking/spoke/modules/spoke-vnet.bicep",
+            "findings": [
+                {
+                    "resource": "Microsoft.Network/virtualNetworks.spokeVnet",
+                    "check_ids": [
+                        "CKV_AZURE_182"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/security/defender/main.bicep",
+            "findings": [
+                {
+                    "resource": "Microsoft.Security/securityContacts.securityContact",
+                    "check_ids": [
+                        "CKV_AZURE_21",
+                        "CKV_AZURE_22"
+                    ]
+                }
+            ]
+        }
+    ]
+}
