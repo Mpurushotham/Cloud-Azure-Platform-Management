@@ -40,7 +40,7 @@ jobs:
           output_format: sarif
           output_file_path: checkov-terraform.sarif
           soft_fail: false
-          baseline: terraform/.checkov.baseline
+          baseline: .checkov.terraform.baseline
 
       - name: Upload Checkov Bicep SARIF
         uses: github/codeql-action/upload-sarif@v4
