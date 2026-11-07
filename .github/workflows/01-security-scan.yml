@@ -70,6 +70,7 @@ jobs:
           scan-type: config
           scan-ref: terraform/
           format: sarif
+          limit-severities-for-sarif: true
           output: trivy-config.sarif
           severity: CRITICAL,HIGH
           exit-code: "1"
