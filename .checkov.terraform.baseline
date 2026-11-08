@@ -1,0 +1,40 @@
+{
+    "failed_checks": [
+        {
+            "file": "/modules/networking/main.tf",
+            "findings": [
+                {
+                    "resource": "module.networking.azurerm_firewall.hub",
+                    "check_ids": [
+                        "CKV_AZURE_216"
+                    ]
+                },
+                {
+                    "resource": "module.networking.azurerm_subnet.bastion",
+                    "check_ids": [
+                        "CKV2_AZURE_31"
+                    ]
+                },
+                {
+                    "resource": "module.networking.azurerm_subnet.firewall_mgmt",
+                    "check_ids": [
+                        "CKV2_AZURE_31"
+                    ]
+                },
+                {
+                    "resource": "module.networking.azurerm_subnet.management",
+                    "check_ids": [
+                        "CKV2_AZURE_31"
+                    ]
+                },
+                {
+                    "resource": "module.networking.azurerm_virtual_network.hub",
+                    "check_ids": [
+                        "CKV_AZURE_182",
+                        "CKV_AZURE_183"
+                    ]
+                }
+            ]
+        }
+    ]
+}

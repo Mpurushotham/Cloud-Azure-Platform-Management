@@ -31,8 +31,9 @@ jobs:
           requireScope: false
 
       - name: Validate branch naming
+        env:
+          BRANCH: ${{ github.head_ref }}
         run: |
-          BRANCH="${{ github.head_ref }}"
           if ! echo "$BRANCH" | grep -qE '^(feature|fix|hotfix|chore|docs|security|governance|network|finops)/[a-z0-9-]+$'; then
             echo "::error::Branch name '$BRANCH' doesn't match required pattern: <type>/<description>"
             echo "Examples: feature/add-corp-landing-zone, fix/firewall-rule-typo, security/update-policies"
@@ -58,8 +59,10 @@ jobs:
           message: "PR must have at least one area label. Add one of: governance, networking, security, monitoring, finops, automation, terraform, documentation, ci-cd"
 
       - name: Check PR description is not empty
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          if [ -z "${{ github.event.pull_request.body }}" ]; then
+          if [ -z "$PR_BODY" ]; then
             echo "::error::PR description is required. Please describe what this PR changes and why."
             exit 1
           fi
